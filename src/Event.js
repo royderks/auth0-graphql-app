@@ -1,8 +1,8 @@
-import React from "react";
-import { useParams } from "react-router-dom";
-import { gql } from "apollo-boost";
-import { useQuery } from "@apollo/react-hooks";
-import { useAuth0 } from "./react-auth0-spa";
+import React from 'react';
+import { useParams } from 'react-router-dom';
+import { gql } from 'apollo-boost';
+import { useQuery } from '@apollo/react-hooks';
+import { useAuth0 } from './react-auth0-spa';
 
 const GET_EVENT = gql`
   query getEvent($id: Int!) {
@@ -20,42 +20,41 @@ const GET_EVENT = gql`
 
 function Event() {
   const { id } = useParams();
-  const { isAuthenticated, getIdTokenClaims } = useAuth0();
+  const { isAuthenticated, getTokenSilently } = useAuth0();
 
-  const [bearerToken, setBearerToken] = React.useState("");
+  const [bearerToken, setBearerToken] = React.useState('');
   React.useEffect(() => {
     const getToken = async () => {
-      const token = isAuthenticated ? await getIdTokenClaims() : "";
-
-      setBearerToken(`Bearer ${token.__raw}`);
+      const token = isAuthenticated ? await getTokenSilently() : '';
+      setBearerToken(`Bearer ${token}`);
     };
     getToken();
-  }, [getIdTokenClaims, isAuthenticated]);
+  }, [getTokenSilently, isAuthenticated]);
 
   const { loading, data, error } = useQuery(GET_EVENT, {
     variables: { id: parseInt(id), bearerToken },
     context: {
       headers: {
-        authorization: bearerToken
-      }
-    }
+        authorization: bearerToken,
+      },
+    },
   });
 
-  if (loading) return "Loading...";
-  if (error) return "Something went wrong...";
+  if (loading) return 'Loading...';
+  if (error) return 'Something went wrong...';
 
   return (
-    <ul style={{ listStyle: "none", width: "100%", padding: "0" }}>
+    <ul style={{ listStyle: 'none', width: '100%', padding: '0' }}>
       <li
         style={{
-          backgroundColor: "lightGrey",
-          marginBottom: "10px",
-          padding: "10px",
-          borderRadius: "5px"
+          backgroundColor: 'lightGrey',
+          marginBottom: '10px',
+          padding: '10px',
+          borderRadius: '5px',
         }}
       >
         <h2>{data.event.title}</h2>
-        <span style={{ fontStyle: "italic" }}>{data.event.date}</span>
+        <span style={{ fontStyle: 'italic' }}>{data.event.date}</span>
 
         <ul>
           {data.event.attendants &&
