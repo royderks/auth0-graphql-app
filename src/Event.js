@@ -1,8 +1,9 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { gql } from 'apollo-boost';
-import { useQuery } from '@apollo/react-hooks';
+import { useQuery, useMutation } from '@apollo/react-hooks';
 import { useAuth0 } from './react-auth0-spa';
+import Form from './Form';
 
 const GET_EVENT = gql`
   query getEvent($id: Int!) {
@@ -10,10 +11,21 @@ const GET_EVENT = gql`
       id
       title
       date
+      description
       attendants {
         id
         name
       }
+      canEdit
+    }
+  }
+`;
+
+const EDIT_EVENT = gql`
+  mutation editEvent($id: Int!, $title: String!, $description: String!) {
+    editEvent(id: $id, title: $title, description: $description) {
+      title
+      description
     }
   }
 `;
@@ -26,13 +38,22 @@ function Event() {
   React.useEffect(() => {
     const getToken = async () => {
       const token = isAuthenticated ? await getTokenSilently() : '';
+
       setBearerToken(`Bearer ${token}`);
     };
     getToken();
   }, [getTokenSilently, isAuthenticated]);
 
-  const { loading, data, error } = useQuery(GET_EVENT, {
+  const { loading, data, error, refetch } = useQuery(GET_EVENT, {
     variables: { id: parseInt(id), bearerToken },
+    context: {
+      headers: {
+        authorization: bearerToken,
+      },
+    },
+  });
+
+  const [editEvent] = useMutation(EDIT_EVENT, {
     context: {
       headers: {
         authorization: bearerToken,
@@ -43,27 +64,46 @@ function Event() {
   if (loading) return 'Loading...';
   if (error) return 'Something went wrong...';
 
+  const { title, date, description, attendants, canEdit } =
+    (data && data.event) || {};
+
   return (
-    <ul style={{ listStyle: 'none', width: '100%', padding: '0' }}>
-      <li
+    <>
+      <div
         style={{
           backgroundColor: 'lightGrey',
-          marginBottom: '10px',
+          margin: '15px 0px',
           padding: '10px',
           borderRadius: '5px',
         }}
       >
-        <h2>{data.event.title}</h2>
-        <span style={{ fontStyle: 'italic' }}>{data.event.date}</span>
+        <h2>{title}</h2>
+        <em>{date}</em>
 
-        <ul>
-          {data.event.attendants &&
-            data.event.attendants.map(attendant => (
-              <li key={attendant.id}>{attendant.name}</li>
-            ))}
-        </ul>
-      </li>
-    </ul>
+        <p>{description}</p>
+
+        {attendants && (
+          <p>
+            <strong>Attendants:</strong>
+
+            <ul>
+              {attendants.map(attendant => (
+                <li key={attendant.id}>{attendant.name}</li>
+              ))}
+            </ul>
+          </p>
+        )}
+      </div>
+      {canEdit && (
+        <Form
+          id={id}
+          onSubmit={editEvent}
+          refetch={refetch}
+          title={title}
+          description={description}
+        />
+      )}
+    </>
   );
 }
 
